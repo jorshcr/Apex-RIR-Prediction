@@ -4,8 +4,8 @@ import pickle
 
 
 # Add data
-'''
-#  load percentage, last rep veloctiy, mean velocity loss, Actual RIR, peak vel slope
+
+#  load percentage, last rep veloctiy, rep count, mean velocity loss peak vel slope,
 
 add_training_example(82, 0.24551, 15, 47.9355,-0.028, 3)
 add_training_example(68, 0.12668, 15, 53.74616,-0.017866, 2)
@@ -81,7 +81,6 @@ add_training_example(80, 0.16019,14,  57.147,  -0.031199,   3)
 add_training_example(80, 0.14778,15,  60.468,  -0.035737,   2)
 add_training_example(80, 0.12658,16,  66.138,  -0.038791,   1)
 
-'''
 
 add_training_example(90, 0.20904, 3,  -17.423,  0.029893, 8)
 add_training_example(90, 0.14599, 4,   17.995, -0.045407, 7)
@@ -92,6 +91,66 @@ add_training_example(90, 0.082081, 8,  53.893, -0.037185, 3)
 add_training_example(90, 0.072702, 9,  59.162, -0.037732, 2)
 add_training_example(90, 0.094252, 10, 47.056, -0.032196, 1)
 
+add_training_example(81.0,0.36239,2,3.055,0.0099902,13.0)
+add_training_example(81.0,0.40326,3,-7.8778,0.02048,12.0)
+add_training_example(81.0,0.36771,4,1.632,-0.0090246,11.0)
+add_training_example(81.0,0.34297,5,8.2521,-0.014923,10.0)
+add_training_example(81.0,0.3008,6,19.532,-0.024539,9.0)
+add_training_example(81.0,0.34206,7,8.4954,-0.018924,8.0)
+add_training_example(81.0,0.32768,8,12.34,-0.019169,7.0)
+add_training_example(81.0,0.38284,9,-2.4147,-0.012012,6.0)
+add_training_example(81.0,0.33268,10,11.005,-0.013166,5.0)
+add_training_example(81.0,0.28386,11,24.065,-0.016392,4.0)
+add_training_example(81.0,0.21426,12,42.683,-0.023015,3.0)
+add_training_example(81.0,0.16019,13,57.147,-0.031199,2.0)
+add_training_example(81.0,0.14778,14,60.468,-0.035737,1.0)
+
+add_training_example(84.0,0.20904,2,-17.423,0.029893,7.0)
+add_training_example(84.0,0.14599,3,17.995,-0.045407,6.0)
+add_training_example(84.0,0.15647,4,12.11,-0.036382,5.0)
+add_training_example(84.0,0.17191,5,3.4335,-0.017274,4.0)
+add_training_example(84.0,0.080902,6,54.556,-0.036186,3.0)
+add_training_example(84.0,0.082081,7,53.893,-0.037185,2.0)
+add_training_example(84.0,0.072702,8,59.162,-0.037732,1.0)
+
+#  load percentage, last rep veloctiy, rep count, mean velocity loss peak vel slope,
+
+add_training_example(78.26,0.42583,3,6.8812,-0.029958,5.0)
+add_training_example(78.26,0.38115,4,16.652,-0.038943,4.0)
+add_training_example(78.26,0.39783,5,13.004,-0.026961,3.0)
+add_training_example(78.26,0.3415,6,25.322,-0.034027,2.0)
+add_training_example(78.26,0.38326,7,16.191,-0.027497,1.0)
+
+add_training_example(75.0,0.64547,2,-16.39,0.11036,9.0)
+add_training_example(75.0,0.57554,3,-3.7801,0.010247,8.0)
+add_training_example(75.0,0.54587,4,1.5701,-0.0089864,7.0)
+add_training_example(75.0,0.40115,5,27.665,-0.055078,6.0)
+add_training_example(75.0,0.30139,6,45.654,-0.078923,5.0)
+add_training_example(75.0,0.087535,7,84.216,-0.14121,4.0)
+add_training_example(75.0,0.33221,8,40.096,-0.11952,3.0)
+add_training_example(75.0,0.083888,9,84.874,-0.13013,2.0)
+add_training_example(75.0,0.15256,10,72.491,-0.1186,1.0)
+
+add_training_example(78.26,0.4068,2,21.817,-0.18028,6.0)
+add_training_example(78.26,0.37102,3,28.693,-0.15004,5.0)
+add_training_example(78.26,0.35403,4,31.959,-0.11116,4.0)
+add_training_example(78.26,0.35116,5,32.51,-0.079038,3.0)
+
+add_training_example(85.0,0.3026,2,-3.0692,0.0093381,5.0)
+add_training_example(85.0,0.27808,3,5.2827,-0.025281,4.0)
+add_training_example(85.0,0.27157,4,7.4996,-0.017925,3.0)
+add_training_example(85.0,0.23726,5,19.185,-0.023008,2.0)
+add_training_example(85.0,0.19981,6,31.942,-0.031129,1.0)
+
+add_training_example(85.0,0.46208,2,6.1747,-0.040078,9.0)
+add_training_example(85.0,0.44959,3,8.7124,-0.020193,8.0)
+add_training_example(85.0,0.43031,4,12.627,-0.023963,7.0)
+add_training_example(85.0,0.35364,5,28.195,-0.045999,6.0)
+add_training_example(85.0,0.36179,6,26.54,-0.045824,5.0)
+add_training_example(85.0,0.18464,7,62.51,-0.069778,4.0)
+add_training_example(85.0,0.16788,8,65.912,-0.074832,3.0)
+add_training_example(85.0,0.17535,9,64.396,-0.077533,2.0)
+add_training_example(85.0,0.17181,10,65.115,-0.073591,1.0)
 
 
 # Train
