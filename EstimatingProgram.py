@@ -12,23 +12,23 @@ load_percent = float(input("Enter load percentage: "))
 # ============ SERIAL SETTINGS ============
 PORT = "COM7"
 BAUD = 115200
-RECORD_SECONDS = 15
-INACTIVITY_LIMIT = 4      # STOP after 4 seconds of no reps
+RECORD_SECONDS = 70            # max duration
 CONC_THRESH = -0.05
 REP_THRESH = 0.3
+VELOCITY_CHANGE_THRESH = 0.1  # threshold for "significant" velocity change
+SAMPLING_RATE = 119            # approximate sensor Hz
 
 MODEL_FILE = "rir_model.pkl"
 
 # ============ LOAD MODEL ============
 if not os.path.exists(MODEL_FILE):
     raise FileNotFoundError("❌ rir_model.pkl not found in this folder")
-
 model = joblib.load(MODEL_FILE)
 
 # ============ CONNECT TO ARDUINO ============
 ser = serial.Serial(PORT, BAUD, timeout=1)
 time.sleep(2)
-print("✅ Connected to Arduino. Recording...")
+print("✅ Connected to Arduino. Recording data...")
 
 # ============ DATA STORAGE ============
 t = []
@@ -39,7 +39,6 @@ rep_count = 1
 prev_conc = False
 rep_indices = []
 rep_start = 0
-last_rep_time = None  # ✅ FIX: track last rep end time
 
 t_start = time.time()
 idx = 0
@@ -59,7 +58,10 @@ line_vt, = ax.plot([], [], label="vt", color="black")
 line_conc, = ax.plot([], [], label="Concentric", color="red", linewidth=2)
 
 ax.legend()
+
 # ============ DATA COLLECTION ============
+window_size = int(4 * SAMPLING_RATE)  # 4 seconds window for inactivity
+
 while time.time() - t_start < RECORD_SECONDS:
     try:
         raw = ser.readline().decode().strip()
@@ -83,33 +85,28 @@ while time.time() - t_start < RECORD_SECONDS:
         # ---- CONCENTRIC LOGIC ----
         if vz_val < CONC_THRESH:
             vt_conc.append(vt_val)
-
             if not prev_conc:
                 rep_start = idx
                 prev_conc = True
         else:
             vt_conc.append(np.nan)
-
             if prev_conc:
                 prev_conc = False
                 rep_end = idx
                 duration = t[rep_end] - t[rep_start]
-
                 if duration > REP_THRESH:
-                    ax.set_title(f"Reps Completed: {rep_count}")
                     rep_indices.append((rep_start, rep_end))
-                    last_rep_time = t[rep_end]   # ✅ critical line
                     rep_count += 1
 
-                # ✅✅ STOP AFTER 4 SECONDS OF NO REPS ✅✅
-            if rep_count > 2:
-                if (t[-1] - last_rep_time) > INACTIVITY_LIMIT:
-                    print("✅ No reps detected for 4 seconds. Stopping recording...")
-                    break
+        # ---- VELOCITY-BASED EARLY STOP ----
+        if len(vt) > window_size:
+            recent_vt = vt[-window_size:]
+            if np.max(recent_vt) - np.min(recent_vt) < VELOCITY_CHANGE_THRESH:
+                print("✅ No significant velocity change detected for 4 seconds. Stopping...")
+                break
 
         idx += 1
 
-    
         # ---- UPDATE PLOT ----
         if idx % 5 == 0:
             line_vx.set_data(t, vx)
@@ -141,10 +138,10 @@ for start, end in rep_indices:
     avgVelocity.append(np.mean(vt[start:end]))
     peakVelocity.append(np.max(vt[start:end]))
 
-mean_vel_last_rep = avgVelocity[-1]
+mean_vel_last_rep = avgVelocity[-1] if avgVelocity else 0
 reps_completed = rep_count
 
-velocityLoss = ((avgVelocity[0] - avgVelocity[-1]) / avgVelocity[0]) * 100
+velocityLoss = ((avgVelocity[0] - avgVelocity[-1]) / avgVelocity[0]) * 100 if rep_count > 0 else 0
 
 # ============ SUMMARY TABLE ============
 repSummary = pd.DataFrame({
