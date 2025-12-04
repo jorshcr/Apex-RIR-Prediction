@@ -5,7 +5,7 @@ disp(serialportlist("available"));
 %% DATA COLLECTION
 
 % ----------- USER SETTINGS -----------
-portName = "COM9";     % change this to your Arduino port
+portName = "COM7";     % change this to your Arduino port
 baud = 115200;
 recordSeconds = 70;    % how long to record
 Fs = 119;              % sampling rate (Hz)
@@ -183,20 +183,9 @@ repSummary = table( (1:rep_count)',duration, startIdx, endIdx, avgVelocity, peak
 disp(repSummary);
 
 % --- Feature Extraction --- 
-meanVel_loss = velocityLoss; % Already calculated 
 meanVel_lastRep = avgVelocity(rep_count);
-% rep_count
-peakVel_slope = peakVel_poly(1);
-setDuration = time(endIdx(rep_count)) - time(startIdx(1)); % start of first rep to end of last rep
-concDuration = sum(duration); % total time during concentrics
 
-% Displaying Features in Command
-setFeatures = table(rep_count, meanVel_loss, meanVel_lastRep, peakVel_slope, setDuration, concDuration, ...
-    'VariableNames',{'Rep Count', 'Vel Loss (%)', 'Last Rep Vel (m/s)','Peak Vel Slope', 'Total Set Duration (s)', 'Concentric Duration (s)'});
+% Displaying Features 
+setFeatures = table(rep_count, meanVel_lastRep, ...
+    'VariableNames',{'Rep Count', 'Last Rep Vel (m/s)'});
 disp(setFeatures);
-
-
-%%
-repStart = 1; repEnd = 6;
-peakVel_poly2 = polyfit(repStart:repEnd, peakVelocity(repStart:repEnd), 1);
-disp("Peak vel at those reps: " + peakVel_poly2(1));
