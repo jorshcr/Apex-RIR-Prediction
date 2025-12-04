@@ -9,14 +9,12 @@ import os
 DATA_FILE = "rir_dataset.csv"
 MODEL_FILE = "rir_model.pkl"
 
-# Create empty dataset if not_exists
+# Create empty dataset if not exists
 if not os.path.exists(DATA_FILE):
     df = pd.DataFrame(columns=[
         "load_percent",
         "mean_velocity_last_rep",
-        "velocity_loss",
         "reps_completed",
-        "slope",            # NEW FEATURE
         "actual_RIR"
     ])
     df.to_csv(DATA_FILE, index=False)
@@ -25,14 +23,12 @@ if not os.path.exists(DATA_FILE):
 df = pd.read_csv(DATA_FILE)
 
 # 2. FUNCTION TO ADD NEW TRAINING DATA
-def add_training_example(load_percent, vel_last_rep, vel_loss, reps, slope, actual_rir):
+def add_training_example(load_percent, vel_last_rep, reps_completed, actual_rir):
     global df
     new_row = {
         "load_percent": load_percent,
         "mean_velocity_last_rep": vel_last_rep,
-        "velocity_loss": vel_loss,
-        "reps_completed": reps,
-        "slope": slope,             # NEW FEATURE
+        "reps_completed": reps_completed,
         "actual_RIR": actual_rir
     }
     df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
@@ -47,7 +43,7 @@ def train_model():
         print("Not enough data to train yet. Need at least 10 samples.")
         return None
 
-    X = df.drop("actual_RIR", axis=1)   # slope now included here automatically
+    X = df.drop("actual_RIR", axis=1)
     y = df["actual_RIR"]
 
     X_train, X_test, y_train, y_test = train_test_split(
@@ -71,9 +67,8 @@ def train_model():
 
     return model
 
-
 # 4. PREDICT RIR FOR NEW WORKOUT SET
-def predict_rir(load_percent, vel_last_rep, vel_loss, reps_completed, slope):
+def predict_rir(load_percent, vel_last_rep, reps_completed):
     if not os.path.exists(MODEL_FILE):
         print("Model not trained yet.")
         return None
@@ -83,14 +78,13 @@ def predict_rir(load_percent, vel_last_rep, vel_loss, reps_completed, slope):
     X_new = pd.DataFrame([{
         "load_percent": load_percent,
         "mean_velocity_last_rep": vel_last_rep,
-        "velocity_loss": vel_loss,
-        "reps_completed": reps_completed,
-        "slope": slope               # NEW FEATURE
+        "reps_completed": reps_completed
     }])
 
     raw_rir = model.predict(X_new)[0]
     rounded_rir = round(raw_rir)
-    print(f"✅ Predicted RIR (): {rounded_rir}")
+    print(f"✅ Predicted RIR: {rounded_rir}")
 
     return rounded_rir
+
 

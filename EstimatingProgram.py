@@ -4,7 +4,7 @@ import os
 
 MODEL_FILE = "rir_model.pkl"
 
-def predict_rir(load_percent, vel_last_rep, vel_loss, reps_completed, slope):
+def predict_rir(load_percent, vel_last_rep, reps_completed):
     if not os.path.exists(MODEL_FILE):
         print("Model file not found. Train the model first.")
         return None
@@ -16,9 +16,7 @@ def predict_rir(load_percent, vel_last_rep, vel_loss, reps_completed, slope):
     X_new = pd.DataFrame([{
         "load_percent": load_percent,
         "mean_velocity_last_rep": vel_last_rep,
-        "velocity_loss": vel_loss,
         "reps_completed": reps_completed,
-        "slope": slope
     }])
 
     raw_rir = model.predict(X_new)[0]
@@ -31,9 +29,8 @@ def predict_rir(load_percent, vel_last_rep, vel_loss, reps_completed, slope):
 
 # -------- ENTER YOUR INPUTS HERE -------- #
 predict_rir(
-    load_percent=100,
-    vel_last_rep=0.77,
-    vel_loss= 12.3,
-    reps_completed = 2,
-    slope= -0.0000001
+    load_percent=90,
+    vel_last_rep=0.2,
+    reps_completed = 5,
+
 )
