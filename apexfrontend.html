@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velocity-Based Training Tracker</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const VelocityTracker = () => {
+            const [loadPercent, setLoadPercent] = useState(80);
+            const [isRecording, setIsRecording] = useState(false);
+            const [status, setStatus] = useState('Ready');
+            const [repCount, setRepCount] = useState(0);
+            const [results, setResults] = useState(null);
+            
+            const socketRef = useRef(null);
+            const liveChartRef = useRef(null);
+            const summaryChartRef = useRef(null);
+            const liveCanvasRef = useRef(null);
+            const summaryCanvasRef = useRef(null);
+            
+            const liveDataRef = useRef({
+                t: [],
+                vx: [],
+                vy: [],
+                vz: [],
+                vt: [],
+                vtConc: []
+            });
+
+            useEffect(() => {
+                // Initialize live chart
+                const liveCtx = liveCanvasRef.current.getContext('2d');
+                liveChartRef.current = new Chart(liveCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            { label: 'vx', data: [], borderColor: '#9ca3af', borderWidth: 1, pointRadius: 0 },
+                            { label: 'vy', data: [], borderColor: '#6b7280', borderWidth: 1, pointRadius: 0 },
+                            { label: 'vz', data: [], borderColor: '#3b82f6', borderWidth: 2, pointRadius: 0 },
+                            { label: 'vt', data: [], borderColor: '#000000', borderWidth: 2, pointRadius: 0 },
+                            { label: 'concentric', data: [], borderColor: '#ef4444', borderWidth: 2, pointRadius: 0, spanGaps: true }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        scales: {
+                            x: { 
+                                title: { display: true, text: 'Time (s)', color: '#94a3b8' },
+                                ticks: { color: '#94a3b8' },
+                                grid: { color: '#334155' }
+                            },
+                            y: { 
+                                title: { display: true, text: 'Velocity (m/s)', color: '#94a3b8' },
+                                ticks: { color: '#94a3b8' },
+                                grid: { color: '#334155' }
+                            }
+                        },
+                        plugins: {
+                            legend: { labels: { color: '#94a3b8' } }
+                        }
+                    }
+                });
+
+                // Connect to Socket.IO server
+                const socket = io('http://localhost:5000');
+                socketRef.current = socket;
+
+                socket.on('status', (data) => {
+                    setStatus(data.message);
+                });
+
+                socket.on('rep_detected', (data) => {
+                    setRepCount(data.rep_count);
+                });
+
+                socket.on('live_data', (data) => {
+                    const liveData = liveDataRef.current;
+                    
+                    liveData.t.push(data.t);
+                    liveData.vx.push(data.vx);
+                    liveData.vy.push(data.vy);
+                    liveData.vz.push(data.vz);
+                    liveData.vt.push(data.vt);
+                    liveData.vtConc.push(data.vt_conc);
+
+                    // Keep only last 500 points
+                    const maxPoints = 500;
+                    if (liveData.t.length > maxPoints) {
+                        liveData.t.shift();
+                        liveData.vx.shift();
+                        liveData.vy.shift();
+                        liveData.vz.shift();
+                        liveData.vt.shift();
+                        liveData.vtConc.shift();
+                    }
+
+                    // Update chart
+                    const chart = liveChartRef.current;
+                    chart.data.labels = liveData.t.map(t => t.toFixed(2));
+                    chart.data.datasets[0].data = liveData.vx;
+                    chart.data.datasets[1].data = liveData.vy;
+                    chart.data.datasets[2].data = liveData.vz;
+                    chart.data.datasets[3].data = liveData.vt;
+                    chart.data.datasets[4].data = liveData.vtConc;
+                    chart.update('none');
+                });
+
+                socket.on('results', (data) => {
+                    setResults(data);
+                    setIsRecording(false);
+                    setStatus('Complete');
+                    
+                    // Update summary chart
+                    setTimeout(() => updateSummaryChart(data), 100);
+                });
+
+                socket.on('error', (data) => {
+                    setStatus(`Error: ${data.message}`);
+                    setIsRecording(false);
+                });
+
+                return () => {
+                    socket.disconnect();
+                    if (liveChartRef.current) liveChartRef.current.destroy();
+                    if (summaryChartRef.current) summaryChartRef.current.destroy();
+                };
+            }, []);
+
+            const updateSummaryChart = (data) => {
+                const ctx = summaryCanvasRef.current.getContext('2d');
+                
+                if (summaryChartRef.current) {
+                    summaryChartRef.current.destroy();
+                }
+
+                const repNumbers = data.avg_velocity.map((_, idx) => idx + 1);
+                
+                summaryChartRef.current = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: repNumbers,
+                        datasets: [
+                            {
+                                label: 'Mean Velocity',
+                                data: data.avg_velocity,
+                                borderColor: '#3b82f6',
+                                backgroundColor: '#3b82f6',
+                                borderWidth: 2,
+                                pointRadius: 4
+                            },
+                            {
+                                label: 'Peak Velocity',
+                                data: data.peak_velocity,
+                                borderColor: '#10b981',
+                                backgroundColor: '#10b981',
+                                borderWidth: 2,
+                                pointRadius: 4
+                            },
+                            ...(data.trend_line.length > 0 ? [{
+                                label: 'Peak Trend',
+                                data: data.trend_line,
+                                borderColor: '#f59e0b',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                pointRadius: 0
+                            }] : [])
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { 
+                                title: { display: true, text: 'Rep #', color: '#94a3b8' },
+                                ticks: { color: '#94a3b8' },
+                                grid: { color: '#334155' }
+                            },
+                            y: { 
+                                title: { display: true, text: 'Velocity (m/s)', color: '#94a3b8' },
+                                ticks: { color: '#94a3b8' },
+                                grid: { color: '#334155' }
+                            }
+                        },
+                        plugins: {
+                            legend: { labels: { color: '#94a3b8' } }
+                        }
+                    }
+                });
+            };
+
+            const startRecording = async () => {
+                setIsRecording(true);
+                setRepCount(0);
+                setResults(null);
+                setStatus('Starting...');
+                
+                // Clear live data
+                liveDataRef.current = {
+                    t: [], vx: [], vy: [], vz: [], vt: [], vtConc: []
+                };
+
+                try {
+                    await fetch('http://localhost:5000/start', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ load_percent: loadPercent })
+                    });
+                } catch (error) {
+                    setStatus(`Error: ${error.message}`);
+                    setIsRecording(false);
+                }
+            };
+
+            const stopRecording = async () => {
+                try {
+                    await fetch('http://localhost:5000/stop', {
+                        method: 'POST'
+                    });
+                    setIsRecording(false);
+                } catch (error) {
+                    console.error('Error stopping:', error);
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white p-8">
+                    <div className="max-w-7xl mx-auto">
+                        {/* Header */}
+                        <div className="mb-8 text-center">
+                            <div className="flex items-center justify-center gap-3 mb-2">
+                                <svg className="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                <h1 className="text-4xl font-bold">Velocity-Based Training Tracker</h1>
+                            </div>
+                            <p className="text-blue-200">Real-time rep analysis with RIR prediction</p>
+                        </div>
+
+                        {/* Control Panel */}
+                        <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 mb-6 border border-slate-700">
+                            <div className="flex items-center gap-6 flex-wrap">
+                                <div className="flex-1 min-w-[200px]">
+                                    <label className="block text-sm font-medium mb-2 text-blue-300">
+                                        Load Percentage
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={loadPercent}
+                                        onChange={(e) => setLoadPercent(parseFloat(e.target.value))}
+                                        disabled={isRecording}
+                                        className="w-full px-4 py-2 bg-slate-700 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none disabled:opacity-50 text-white"
+                                        min="0"
+                                        max="100"
+                                        step="0.1"
+                                    />
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={startRecording}
+                                        disabled={isRecording}
+                                        className="flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors"
+                                    >
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M8 5v14l11-7z"/>
+                                        </svg>
+                                        Start
+                                    </button>
+                                    <button
+                                        onClick={stopRecording}
+                                        disabled={!isRecording}
+                                        className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-slate-600 disabled:cursor-not-allowed rounded-lg font-semibold transition-colors"
+                                    >
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                            <rect x="6" y="6" width="12" height="12"/>
+                                        </svg>
+                                        Stop
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <div className={`w-3 h-3 rounded-full ${isRecording ? 'bg-red-500 animate-pulse' : 'bg-slate-600'}`}></div>
+                                    <span className="text-sm">{status}</span>
+                                </div>
+                                <div className="text-sm font-semibold text-blue-300">
+                                    Reps Detected: <span className="text-2xl text-white">{repCount}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Live Velocity Chart */}
+                        <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 mb-6 border border-slate-700">
+                            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                                <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                </svg>
+                                Real-Time Velocity
+                            </h2>
+                            <div style={{ height: '400px' }}>
+                                <canvas ref={liveCanvasRef}></canvas>
+                            </div>
+                        </div>
+
+                        {/* Results Panel */}
+                        {results && (
+                            <div className="space-y-6">
+                                {/* Stats Cards */}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-6 border border-blue-500">
+                                        <div className="text-sm text-blue-200 mb-1">Reps Completed</div>
+                                        <div className="text-3xl font-bold">{results.reps_completed}</div>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl p-6 border border-purple-500">
+                                        <div className="text-sm text-purple-200 mb-1">Velocity Loss</div>
+                                        <div className="text-3xl font-bold">{results.velocity_loss}%</div>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-xl p-6 border border-green-500">
+                                        <div className="text-sm text-green-200 mb-1">Mean Velocity (Last Rep)</div>
+                                        <div className="text-3xl font-bold">{results.mean_velocity_last_rep}</div>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-orange-600 to-orange-700 rounded-xl p-6 border border-orange-500">
+                                        <div className="text-sm text-orange-200 mb-1">Estimated RIR</div>
+                                        <div className="text-3xl font-bold">{results.predicted_rir}</div>
+                                    </div>
+                                </div>
+
+                                {/* Rep Summary Chart */}
+                                <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-700">
+                                    <h2 className="text-xl font-semibold mb-4">Rep Velocity Analysis</h2>
+                                    <div style={{ height: '400px' }}>
+                                        <canvas ref={summaryCanvasRef}></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<VelocityTracker />, document.getElementById('root'));
+    </script>
+</body>
+</html>
