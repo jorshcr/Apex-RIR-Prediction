@@ -4,9 +4,11 @@ This project utilizes the IMU embedded on an Arduino Nano BLE Sense 33 to collec
 This System includes the following code:
 
 1. Arduino Code - Collects real time Acceleration data using IMU, applies a 1st order High Pass Filter to cancel out drift, calculates Velocity by integrating Acceleration with time, applies the filter once again, then streams Velocity data to MATLAB
-2. MATLAB Code - Reads real-time serial data from the Arduino, detects reps in their concentric phase (weight going up), and extracts features based on data of each rep "window", then extracts set features to actually be used in the model.
+2. Backend Code - (Built off of previous MATLAB code), Reads real-time serial data from the Arduino, detects reps in their concentric phase (weight going up), and extracts features based on data of each rep "window", then extracts set features to be used in the model. The backend also includes all of the ML model training and functions within it, so that the features are directly inputted into the model. Simultaneously, the back end streams live velocity to a chart in the front end, sends the RIR prediction, and plots the final set graph.
 
-Block Diagram: Gym Weightstack -> Arduino Nano IMU -> MATLAB -> Plots / Visual Figures -> Python Random Forest Model -> RIR Prediction
+System Flow: Gym Weightstack -> Arduino Nano IMU -> Backend -> Python Random Forest Model -> RIR Prediction -> Front End HTML Interface
+
+Tech Stack Pipeline: Arduino Code Streams Real-time Velocity -> Frontend Takes User Input (Load %) -> Backend Captures and Plots Data + Rep Tracking -> Backend Trains/Runs Temp Model -> Backend Predicts RIR based on Set Data -> Frontend Displays Predictions, Analytics, and Insights
 
 Hardware Requirements:
 Arduino Nano BLE Sense 33
@@ -14,11 +16,13 @@ Arduino Container + Adhesive (Alien Tape Preferred)
 USB Cable + Extension (if needed)
 Laptop
 
-Data Collection / Guide
-Plug in Arduino to Laptop
-Upload VelocityDataCollection code to Arduino, Note down COM port. 
-Open MATLAB file and change COMPORT to match, and set recording time to much longer
-RUN the MATLAB code once to ensure everything is functional
-After confirming functionality, attach Arduino to ontop of Weight stack
-Once ready, click RUN, then perform the set
-Upon completion, Enter the SET LEVEL data into python model
+Use Guide:
+1. Place Arduino in Container and Alien Tape around it, Place it ontop of Weight Stack
+2. Plug in Arduino and upload Apexarduino code
+3. Run the apexbackend file in VSCODE 
+4. Open the apexfrontend html file (This should open up the interface in your browser)
+5. For your desired set, input your load percent.
+    Formula: (Current Weight of this excercise and machine / 1RM on this excercise and machine) * 100
+6. Press START, and continue the set. Velocity data of your reps will be plotted in real time.
+7. Once completed, the code will stop automatically, provide RIR estimation and give further analytics.
+
